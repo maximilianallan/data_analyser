@@ -1,0 +1,15 @@
+README FOR DATA ANALYSER
+
+c++ program for reading in images and classification masks. then using different represenations of image data (RGB,HSV,SIFT...) it creates histograms showing the distribution of these representations across the classes
+
+currently only supports binary classification
+
+REQUIRES:
+
+opencv
+
+OS SUPPORT:
+currently only linux, windows support to be added later
+
+RUN:
+image_analyser is expects to be given a root directory containing training data as a command line argument. if none is given then it assumes the cwd is the root. it parses all dirs within this root directory beginning with `data` for folders named `training*` and `mask*` so name your folders something that fits this description.
