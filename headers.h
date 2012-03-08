@@ -38,5 +38,7 @@
 #elif defined _WIN32 || _WIN64
 
 #include<Windows.h>
+#include<tchar.h>
+#include<strsafe.h>
 
 #endif

@@ -47,14 +47,50 @@ parse_dset(const std::string &dset, std::vector<std::pair<std::string,std::strin
 
 #elif _WIN32 || _WIN64 
 
+  _getcwd(cwd,size);
+  
+  int ret_val = _chdir(dset.c_str());
+  if(ret_val == ENOENT) throw std::runtime_error("could not cd into dir " + dset);
+  else if(ret_val != 0) throw std::runtime_error("error, unknown error with " + dset);
+
+  TCHAR sz_dir[MAX_PATH];
+  WIN32_FIND_DATA ffd;
+
+  StringCchCopy(sz_dir,MAX_PATH,cwd);
+  StringCchCat(sz_dir, MAX_PATH, TEXT("\\*"));
+
+  HANDLE h_find = FindFirstFile(sz_dir, &ffd);
+
+  if(h_find == INVALID_HANDLE_VALUE) throw std::runtime_error("error, invalid file handle returned");
+
+  for(;;){
+    
+    if(!FindNextFile(h_find, &ffd)) break;
+    std::string sim_dir( ffd.cFileName );
+    if(sim_dir.find("training") != std::string::npos){
+      ims_dir = sim_dir; //find the same of the training set dir
+      chk_cnt++;
+    }
+    if(sim_dir.find("mask") != std::string::npos){
+      msk_dir = sim_dir; //find the name ogf the mask dir
+      chk_cnt++;
+    }
+  }
+  if(chk_cnt != 2) throw std::runtime_error("bad filenames in " + dset + "\nneed one training dataset and one masks\n");
+
+  FindClose(h_find);
+
+  get_filenames(ims_dir,msk_dir,cwd + std::string("/") + dset,images);
+  
+  //change process working dir back to root dir
+  if(_chdir(cwd)) throw std::runtime_error("error changing back to root_dir\n");
+  
 
 #endif
   
   delete [] cwd;
   
 }
-
-
 
 void 
 find_dsets(std::vector<std::pair<std::string,std::string> > &images){
@@ -77,11 +113,48 @@ find_dsets(std::vector<std::pair<std::string,std::string> > &images){
   closedir(r_dir);
   
 #elif _WIN32 || _WIN64
-  
+
+
+  size_t size = 100;
+  char *cwd = new char[size];
+  getcwd(cwd,size);
+
+  TCHAR sz_dir[MAX_PATH];
+  WIN32_FIND_DATA ffd;
+
+  StringCchCopy(sz_dir,MAX_PATH,cwd);
+  StringCchCat(sz_dir, MAX_PATH, TEXT("\\*"));
+
+  HANDLE h_find = FindFirstFile(sz_dir, &ffd);
+
+  if(h_find == INVALID_HANDLE_VALUE) throw std::runtime_error("error, invalid file handle returned");
+
+  for(;;){
+    
+    if(!FindNextFile(h_find, &ffd)) break;
+    std::string sim_dir( ffd.cFileName );
+    if(sim_dir.find("training") != std::string::npos){
+      ims_dir = sim_dir; //find the same of the training set dir
+      chk_cnt++;
+    }
+    if(sim_dir.find("mask") != std::string::npos){
+      msk_dir = sim_dir; //find the name ogf the mask dir
+      chk_cnt++;
+    }
+  }
+  if(chk_cnt != 2) throw std::runtime_error("bad filenames in " + dset + "\nneed one training dataset and one masks\n");
+
+  FindClose(h_find);
+
+  delete [] cwd;
+
+
+
 #endif
   
   
 }
+
 /*
   params: 
   im_dir - a directory for images
@@ -142,17 +215,22 @@ convert(const std::pair<cv::Mat,cv::Mat> &ims, void (*multi_convert)(cv::Mat &),
   prepare_data(n_im,not_im,c2_pix_vals);
 
   //create the historgrams for background and forground for each colour channel
+
+  histogram<> c_histogram;
+  c_histogram.init();
+
   for(int n=0;n<n_im.channels();n++){
 
-    histogram<> c1_histogram(*max_element(c1_pix_vals[n].begin(),c1_pix_vals[n].end()));
-    c1_histogram.fill(c1_pix_vals[n]);
-    c1_histogram.draw();
+    //histogram<> c1_histogram(*max_element(c1_pix_vals[n].begin(),c1_pix_vals[n].end()));
+    c_histogram.fill(c1_pix_vals[n]);
+    c_histogram.draw();
 
-    histogram<> c2_histogram(*max_element(c2_pix_vals[n].begin(),c2_pix_vals[n].end()));
-    c2_histogram.fill(c2_pix_vals[n]);    
-    c2_histogram.draw();
+    //histogram<> c2_histogram(*max_element(c2_pix_vals[n].begin(),c2_pix_vals[n].end()));
+    c_histogram.fill(c2_pix_vals[n]);    
+    c_histogram.draw();
   }
 
+  c_histogram.end();
 
 }
 

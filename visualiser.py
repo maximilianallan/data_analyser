@@ -60,5 +60,3 @@ class visualiser:
          data[-1] = 0
                  
          return (bins,data)
-
-
