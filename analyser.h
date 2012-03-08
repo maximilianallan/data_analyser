@@ -1,6 +1,7 @@
 #pragma once
 #include"headers.h"
 #include"histogram.h"
+#include"converter_functions.h"
 
 class image_analyser{
 
@@ -11,10 +12,10 @@ class image_analyser{
   void push(const cv::Mat &, const cv::Mat &);
   void push(const std::string &, const std::string &);
   void push(const std::pair<cv::Mat,cv::Mat> &);
-  void push_all(const std::string &);
+  void push_all();
 
   std::pair<cv::Mat,cv::Mat> &get(const size_t);
-  
+  void create_histograms() const;
   
 
 

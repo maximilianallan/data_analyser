@@ -1,12 +1,12 @@
 #include"helper_functions.h"
-
+#include"histogram.h"
 
 void 
 parse_dset(const std::string &dset, std::vector<std::pair<std::string,std::string> > &images){
   
   //get the cwd in buffer
   size_t size = 100;
-  char *cwd = new char[size]; 
+  char *cwd = new char[size];
   
 #ifdef __linux__
   
@@ -57,13 +57,11 @@ parse_dset(const std::string &dset, std::vector<std::pair<std::string,std::strin
 
 
 void 
-find_dsets(const std::string &root_dir, std::vector<std::pair<std::string,std::string> > &images){
+find_dsets(std::vector<std::pair<std::string,std::string> > &images){
   
 #ifdef __linux__
 
-  chdir(root_dir.c_str());
-  DIR *r_dir = opendir(root_dir.c_str());
-  if(!r_dir) throw std::runtime_error("could not open " + root_dir + "\n");
+  DIR *r_dir = opendir(".");
   
   for(;;){
     //check if dirent is a data_set and open it
@@ -71,10 +69,11 @@ find_dsets(const std::string &root_dir, std::vector<std::pair<std::string,std::s
     if(!dset) break;
     std::string dset_name(dset->d_name);
     if(dset_name.find("data") == std::string::npos) continue;
-    
+    if(images.size() > 5) break;
     //read the filenames into the files vector
     parse_dset(dset_name,images);
   }
+
   closedir(r_dir);
   
 #elif _WIN32 || _WIN64
@@ -84,13 +83,11 @@ find_dsets(const std::string &root_dir, std::vector<std::pair<std::string,std::s
   
 }
 /*
-
   params: 
   im_dir - a directory for images
   msk_dir - a directory for masks
   root_dir  - the root directory containing im_dir and msk_dir
   images - vector to stick the filenames for each image and its corresponding mask 
-  
 */
 
 void
@@ -124,10 +121,97 @@ read_ims(const std::vector<std::pair<std::string,std::string> > &files, std::vec
       cv::Mat im = cv::imread(m->first);
       cv::Mat msk = cv::imread(m->second);
       images.push_back(std::make_pair(im,msk));
-      //pair<cv::Mat,cv::Mat> tmp_pr(im,msk);
     }
           
 
 }
+
+void 
+convert(const std::pair<cv::Mat,cv::Mat> &ims, void (*multi_convert)(cv::Mat &), const std::string &heading){
+
+  cv::Mat n_im = ims.first.clone();
+  //convert image with conversion function
+  multi_convert(n_im);
+    
+  std::vector<std::vector<double> > c1_pix_vals;
+  std::vector<std::vector<double> > c2_pix_vals;  
+
+  //create the inverse bitmask for the background
+  cv::Mat not_im = ~ims.second;
+  prepare_data(n_im,ims.second,c1_pix_vals);  
+  prepare_data(n_im,not_im,c2_pix_vals);
+
+  //create the historgrams for background and forground for each colour channel
+  for(int n=0;n<n_im.channels();n++){
+
+    histogram<> c1_histogram(*max_element(c1_pix_vals[n].begin(),c1_pix_vals[n].end()));
+    c1_histogram.fill(c1_pix_vals[n]);
+    c1_histogram.draw();
+
+    histogram<> c2_histogram(*max_element(c2_pix_vals[n].begin(),c2_pix_vals[n].end()));
+    c2_histogram.fill(c2_pix_vals[n]);    
+    c2_histogram.draw();
+  }
+
+
+}
+
+/* 
+   pushes pixels (of either uchar,float or double) into vector of pix_vals according to bitmask
+*/
+
+void prepare_data(const cv::Mat &im, const cv::Mat &msk, std::vector<std::vector<double> > & pix_vals){
+
+  const int rows = im.rows;
+  const int cols = im.cols;
+  const int chans = im.channels();
+  const size_t elem_size = im.elemSize1();
+  unsigned char *msk_ptr = (unsigned char *)msk.data;
+  unsigned char *im_ptr = (unsigned char *)im.data;
+
+  //create the vectors for each colour channel
+  for(int i=0;i<chans;i++){
+    std::vector<double> tmp;
+    pix_vals.push_back(tmp);
+  }
+  
+  for(int r=0;r<rows;r++){
+    for(int c=0;c<cols;c++){
+
+      int index = (r*cols + c)*chans;
+      const bool msk_val = msk_ptr[index] ==  (unsigned char)255;
+      index *= elem_size;
+
+      //is pixel true in bitmask?
+      if(msk_val){
+	
+	//for each colour channel
+	for(int n=0;n<chans;n++){
+	  
+	  //copy the pixel data according to element size
+	  void *data = malloc(elem_size*sizeof(char));
+	  memcpy( data,&im_ptr[index+n],elem_size);
+	  
+	  if(elem_size == sizeof(char)){
+	    unsigned char tmp = *(unsigned char *)data;
+	    pix_vals[n].push_back( (double)tmp );
+	  }
+
+	  if(elem_size == sizeof(float)){
+	    float tmp = *(float *)data;
+	    pix_vals[n].push_back( (double)tmp);
+	  }
+
+	  if(elem_size == sizeof(double)){
+	    pix_vals[n].push_back(*(double *)data);
+	  }
+
+	  free(data);
+	}
+      }
+    }
+  }
+}
+			
 
 

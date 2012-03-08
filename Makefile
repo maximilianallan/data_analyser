@@ -3,13 +3,14 @@
 CC=g++
 COMPILE_FLAGS= -g -Wall -std=c++0x -I $(INC_DIRS)
 LINK_FLAGS= -L $(LIB_DIRS) 
-INC_DIRS= /usr/local/include/TooN `pkg-config --cflags opencv`
-LIB_DIRS= -llapack -lblas `pkg-config --libs opencv`
+INC_DIRS= /usr/include/python2.6/ `pkg-config --cflags opencv` 
+LIB_DIRS= `pkg-config --libs opencv` -lpython2.6
 TARGET=analyser
 
 OBJECTS=	main.o \
 		analyser.o \
-		helper_functions.o
+		helper_functions.o \
+		converter_functions.o
 
 All:$(TARGET)
 

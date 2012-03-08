@@ -1,5 +1,9 @@
 #pragma once
 
+//python include - must be before standard headers
+
+#include<Python.h>
+
 // stl headers
 
 #include<unordered_map>
@@ -7,6 +11,7 @@
 #include<utility>
 #include<string>
 #include<exception>
+#include<algorithm>
 
 //opencv headers
 
@@ -18,8 +23,11 @@
 
 #include<fstream>
 #include<cstdlib>
-
 #include<iostream>
+#include<assert.h>
+#include<errno.h>
+#include<stdio.h>
+
 
 //linux headers
 
